@@ -1,0 +1,15 @@
+*.log
+*.zip
+*.avi
+*.hdf
+*.xlsx
+*.txt
+*.pkl
+*.csv
+.ipynb_checkpoints/
+backup/
+**/__pycache__/
+*.pdf
+*.pgf
+*.ods
+*.xlsx#
