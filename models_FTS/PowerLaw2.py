@@ -1,6 +1,5 @@
 import sys
 from math import e
-import numpy as np
 
 # setting path
 sys.path.append('..')
@@ -11,20 +10,26 @@ from models_FTS.components import parafins, olefins, others
 from y_n import calc_y_n
 from upsilon_n import upsilon_n
 
-def Yates():
-    model_name = 'Yates'
-    # params = [3.92008633e-06, 0.00000000e+00, 5.82506680e+01, 1.80929218e+05]
-    params = [3.46203234e-05, 4.84038632e-02, 1.02031093e+01, 1.56890130e+05]
-    param_dict = {'k_ads': params[0],
-                     'H_ads': params[1],
-                     'A_HCs': params[2]*1000,
-                     'E_HCs': params[3]}
+def PowerLaw2():
+    model_name = 'PowerLaw2'
+    param_dict = {
+        'k_ads': 0.000316, # 1/Pa
+        'H_ads': 13670.667834, # J/mol
+        'A_HCs': 0.002300*1000, # mol/s/kg/Pa²
+        'E_HCs': 146681.774381, # J/mol
+        'a': 1.482418,
+        'b': 1.360294,
+        'c': 1.437197,
+    }
 
     bnds = {
         'k_ads': (0, None), # 1/Pa
         'H_ads': (0, None), # J/mol
         'A_HCs': (0, None), # mol/s/kg/Pa²
         'E_HCs': (0, None), # J/mol
+        'a': (0, None),
+        'b': (0, None),
+        'c': (0, None),
     }
 
     model = KineticModel(model_name, params = param_dict, bnds = bnds)
@@ -49,6 +54,9 @@ def Yates():
             H_ads = param_dict['H_ads']
             A_HCs = param_dict['A_HCs']
             E_HCs = param_dict['E_HCs']
+            a = param_dict['a']
+            b = param_dict['b']
+            c = param_dict['c']
 
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
@@ -57,7 +65,7 @@ def Yates():
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * upsilon_n(n) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n * upsilon_n(n) * k_HCs * P_H2**b * P_CO**a / (1 + K_ads * P_CO**c)**2
             return r
 
         reaction = Reaction(
@@ -85,6 +93,9 @@ def Yates():
             H_ads = param_dict['H_ads']
             A_HCs = param_dict['A_HCs']
             E_HCs = param_dict['E_HCs']
+            a = param_dict['a']
+            b = param_dict['b']
+            c = param_dict['c']
 
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
@@ -93,7 +104,7 @@ def Yates():
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * (1 - upsilon_n(n)) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n * (1 - upsilon_n(n)) * k_HCs * P_H2**b * P_CO**a / (1 + K_ads * P_CO**c)**2
             return r
 
         reaction = Reaction(

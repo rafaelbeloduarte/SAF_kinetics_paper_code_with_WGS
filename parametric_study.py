@@ -30,9 +30,9 @@ pd.options.display.max_seq_items = 2000
 # %%
 # loading data for plotting
 # Remenber: the fit was also performed on reconciled data
-with open('reconciled_data.pkl', 'rb') as f:
+with open('reconciled_data_validation.pkl', 'rb') as f:
     data = pickle.load(f)
-kinetic_data = data.loc[data['CINÉTICA'] == 1.0].reset_index()
+kinetic_data = data.loc[(data['CINÉTICA'] == 1.0) | (data['VALIDATION'] == 1.0)].reset_index()
 kinetic_data['m_cat_kg'] = kinetic_data['m_cat_g']/1000
 
 # %%
@@ -87,6 +87,7 @@ from models_FTS.MousaviPLaw      import MousaviPLaw
 from models_FTS.Wang             import Wang
 from models_FTS.WangSimple       import WangSimple
 from models_FTS.Elementary       import Elementary
+from models_FTS.PowerLaw2        import PowerLaw2
 
 # %%
 Yates       =      Yates()
@@ -99,6 +100,7 @@ MousaviPLaw =      MousaviPLaw()
 Wang        =      Wang()
 WangSimple  =      WangSimple()
 Elementary  =      Elementary()
+PowerLaw2 = PowerLaw2()
 
 # %%
 reactor.add_model(Yates)
@@ -131,9 +133,6 @@ dfs = reactor.parametric_study(param_dict_T0,
                                conversions = ['carbon monoxide', 'hydrogen'],
                               )
 parametric_T0 = dfs[model]
-
-# %%
-kinetic_data.columns
 
 # %%
 plots_leg = {
@@ -198,12 +197,5 @@ plt.legend(handles, labels, bbox_to_anchor=(1.05, 1.05))
 plt.xlabel(r'$T$ (ºC)')
 plt.ylabel(r'$F$ (mol/s)')
 plt.grid('both')
-
-# %%
-from pympler import asizeof
-
-asizeof.asizeof(reactor)
-
-# %%
 
 # %%

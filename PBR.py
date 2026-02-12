@@ -392,7 +392,7 @@ def fit(self, method = 'Nelder-Mead', maxfev_per_param = 200,
         os.makedirs(directory, exist_ok=True) # Create intermediate directories
 
     fit_result = {'model': [], 'params': [], 'params_names': [],
-                  'units': [], 'aic_c': [], 'aic': [],
+                  'units': [], 'aic_c_train': [], 'aic_train': [], 'aic_c_test': [], 'aic_test': [],
                   'fun': [], 'nfev': [], 'success': [], 'message': []
             }
     # when fitting use only the trainning data to speed up
@@ -426,28 +426,34 @@ def fit(self, method = 'Nelder-Mead', maxfev_per_param = 200,
         self.models[self.model.name].aic_c          = self.model.aic_c
         self.models[self.model.name].aic            = self.model.aic
         self.models[self.model.name].minimum        = self.model.minimum
-        with open(f'{file_name}_{self.model.name}_fitted_model_params_dict.pkl', 'wb') as f:
+        with open(f'{file_name}_fitted_model_params_dict.pkl', 'wb') as f:
             pickle.dump(self.model.kin_param_dict, f)
 
         fit_result['model'].append(self.model.name)
         fit_result['params'].append(list(self.model.kin_param_dict.values()))
         fit_result['params_names'].append(list(self.model.kin_param_dict.keys()))
         fit_result['units'].append(self.model.units)
-        fit_result['aic_c'].append(self.model.aic_c)
-        fit_result['aic'].append(self.model.aic)
+        fit_result['aic_c_train'].append(self.model.aic_c)
+        fit_result['aic_train'].append(self.model.aic)
         fit_result['fun'].append(self.model.minimum.fun)
         fit_result['nfev'].append(self.model.minimum.nfev)
         fit_result['success'].append(self.model.minimum.success)
         fit_result['message'].append(self.model.minimum.message)
+        #calculate AIC for test dataset too
+        self.tmp_data = self.test_data
+        self.calc_residuals()
+        self.calc_neg_logLik()
+        fit_result['aic_c_test'].append(self.model.aic_c)
+        fit_result['aic_test'].append(self.model.aic)
 
     # after fitting is finished set the best model
-    aic_c_dict = {model_name: model.aic_c for model_name, model in self.models.items()}
-    self.best_model = min(aic_c_dict, key = aic_c_dict.get)
-    self.best_model_params = self.models[self.best_model].kin_param_dict
-    print(f"Best model according to AIC_c: {self.best_model}")
-    print(f"Best model parameters: {self.best_model_params}")
+    # aic_c_dict = {model_name: model.aic_c for model_name, model in self.models.items()}
+    # self.best_model = min(aic_c_dict, key = aic_c_dict.get)
+    # self.best_model_params = self.models[self.best_model].kin_param_dict
+    # print(f"Best model according to AIC_c: {self.best_model}")
+    # print(f"Best model parameters: {self.best_model_params}")
     self.fit_result = pd.DataFrame(fit_result)
-    self.fit_result['relative_likelihood'] = exp**((self.fit_result['aic_c'].min()-self.fit_result['aic_c'])/2)
+    self.fit_result['relative_likelihood_test'] = exp**((self.fit_result['aic_c_test'].min()-self.fit_result['aic_c_test'])/2)
 
     # save the results
     with pd.ExcelWriter(f'{file_name}.xlsx',
@@ -495,8 +501,10 @@ def bootstrap(self, iterations = 10, train_size = 0.8, random_state = None,
 
         # initialize a dict to store the parameters distributions
         params_distribution[model] = {key: [] for key in self.model.kin_param_dict.keys()}
-        params_distribution[model]['aic'] = []
-        params_distribution[model]['aic_c'] = []
+        params_distribution[model]['aic_train'] = []
+        params_distribution[model]['aic_c_train'] = []
+        params_distribution[model]['aic_test'] = []
+        params_distribution[model]['aic_c_test'] = []
         params_distribution[model]['fun'] = []
         params_distribution[model]['nfev'] = []
         params_distribution[model]['success'] = []
@@ -518,12 +526,18 @@ def bootstrap(self, iterations = 10, train_size = 0.8, random_state = None,
 
             for i, key in enumerate(self.model.kin_param_dict):
                 params_distribution[model][key].append(minimum.x[i])
-            params_distribution[model]['aic'].append(self.model.aic)
-            params_distribution[model]['aic_c'].append(self.model.aic_c)
+            params_distribution[model]['aic_train'].append(self.model.aic)
+            params_distribution[model]['aic_c_train'].append(self.model.aic_c)
             params_distribution[model]['fun'].append(minimum.fun)
             params_distribution[model]['nfev'].append(minimum.nfev)
             params_distribution[model]['success'].append(minimum.success)
             params_distribution[model]['message'].append(minimum.message)
+            #calculate AIC for test dataset too
+            self.tmp_data = self.test_data
+            self.calc_residuals()
+            self.calc_neg_logLik()
+            params_distribution[model]['aic_test'].append(self.model.aic)
+            params_distribution[model]['aic_c_test'].append(self.model.aic_c)
 
         # clear params list
         self.model.kin_params_list = []
@@ -550,8 +564,8 @@ def bootstrap(self, iterations = 10, train_size = 0.8, random_state = None,
         # put the AICs in the CIs_dict too
         for key in self.model.kin_param_dict.keys():
             CIs_dict[f'{key}_{model}'] = CIs_dict[f'{key}_{model}'] | {
-                'AIC_c': self.model.aic_c,
-                'AIC'  : self.model.aic,
+                'AIC_c_train': self.model.aic_c,
+                'AIC_train'  : self.model.aic,
             }
 
     aic_c_dict = {model_name: model.aic_c for model_name, model in self.models.items()}
@@ -947,7 +961,7 @@ def plot_parity(self, ncols, nrows, figsize,
 
 def load_data(self, path):
     try:
-        self.kinetic_data = pd.read_csv(path)
+        self.kinetic_data = pd.read_csv(path).astype('object')
         # filling index numbers
         self.kinetic_data.loc[2:len(self.kinetic_data) - 1, 'index'] = list(range(len(self.kinetic_data) - 2))
         self.kinetic_data = self.kinetic_data.replace(to_replace=',', value='.', regex=True)
@@ -1072,7 +1086,7 @@ def add_model(self, model):
             if component not in self.component_list:
                 self.component_list.append(component)
                 # insert the component as 0 in x0 and Fi0, as the user did not provide a value
-                print(f'x0 not provided for {component}, assuming value is 0.')
+                # print(f'x0 not provided for {component}, assuming value is 0.')
                 self.x0[component] = 0
                 self.Fi0[component] = 0
 
@@ -1186,7 +1200,7 @@ class PBR:
         # generate component names list
         self.component_list = list(self.x0.keys()) # this is a list of all the components, more can be added by methods, such as when adding reactions
         self.dF_dW_i = {} # molar material balance dictionary
-        create_csv_template(self)
+        # create_csv_template(self)
         self.solver_method = solver_method
         self.solver_rtol = rtol
         self.solver_atol = atol

@@ -1,5 +1,6 @@
 import sys
 from math import e
+import numpy as np
 
 # setting path
 sys.path.append('..')
@@ -7,15 +8,16 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
+from y_n import calc_y_n
+from upsilon_n import upsilon_n
 
 def Botes():
     model_name = 'Botes'
-    param_dict = {
-        'k_ads': 0.1 / ( 1e6**0.5 * e**( - 5e4 / (8.314*500) ) ),
-        'H_ads': 5e4, # J/mol
-        'A_HCs': ( 4.7e-5 / 5.12 / 1000 ) / ( 1e6**1.25 * e**( - 1e5 / (8.314*500) ) ),
-        'E_HCs': 1e5, # J/mol
-    }
+    params = [1.51130997e-01, 2.40188611e-03, 1.86775361e+07, 1.61546758e+05]
+    param_dict = {'k_ads': params[0],
+                     'H_ads': params[1],
+                     'A_HCs': params[2]*1000,
+                     'E_HCs': params[3]}
 
     bnds = {
         'k_ads': (0, None), # 1/Pa
@@ -23,10 +25,6 @@ def Botes():
         'A_HCs': (0, None), # mol/s/kg/Pa²
         'E_HCs': (0, None), # J/mol
     }
-
-    beta_0 = 48.45
-    beta_1 = -0.09191
-    beta_2 = -0.7489
 
     model = KineticModel(model_name, params = param_dict, bnds = bnds)
 
@@ -54,30 +52,22 @@ def Botes():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            alfa = 1/(1 + e**-(beta_0 + beta_1*T + beta_2*F_H2/F_CO))
-
-            upsilon_exp = -3.303 + 0.4139*n + 3.391*(n == 2) + 21.01*(n == 3)
-            upsilon_n = 1/(1 + (1 - (n == 1)) * e**-upsilon_exp)
-
-            Kc2 = 204.08 - 0.3960*T
-            Kc3 = 88.47  - 0.1737*T
-
-            y_n = (1-alfa)*alfa**(n - 1 + Kc2*(n == 2) + Kc3*(n == 3))
+            y_n = calc_y_n(n, T, F_H2/F_CO)
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r = y_n * upsilon_n * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
+            r     = y_n * upsilon_n(n) * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
             return r
 
         reaction = Reaction(
-                     name = parafin, 
+                     name = parafin,
                      stoic = {
                              'carbon monoxide': -n,
                              'hydrogen': -(2*n + 1),
                               parafin: 1,
                              'water': n,
                          },
-                     base_component = parafin, 
+                     base_component = parafin,
                      rate_function = rate_n_para,
                      rate_unit = 'mol/s/kg',
         )
@@ -98,30 +88,22 @@ def Botes():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            alfa = 1/(1 + e**-(beta_0 + beta_1*T + beta_2*F_H2/F_CO))
-
-            upsilon_exp = -3.303 + 0.4139*n + 3.391*(n == 2) + 21.01*(n == 3)
-            upsilon_n = 1/(1 + (1 - (n == 1)) * e**-upsilon_exp)
-
-            Kc2 = 204.08 - 0.3960*T
-            Kc3 = 88.47  - 0.1737*T
-
-            y_n = (1-alfa)*alfa**(n - 1 + Kc2*(n == 2) + Kc3*(n == 3))
+            y_n = calc_y_n(n, T, F_H2/F_CO)
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r = y_n * (1 - upsilon_n) * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
+            r     = y_n * (1 - upsilon_n(n)) * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
             return r
 
         reaction = Reaction(
-                     name = olefin, 
+                     name = olefin,
                      stoic = {
                              'carbon monoxide': -n,
                              'hydrogen': -(2*n),
                               olefin: 1,
                              'water': n,
                          },
-                     base_component = olefin, 
+                     base_component = olefin,
                      rate_function = rate_n_ole,
                      rate_unit = 'mol/s/kg',
         )

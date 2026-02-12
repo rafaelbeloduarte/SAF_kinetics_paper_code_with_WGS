@@ -1,5 +1,6 @@
 import sys
 from math import e
+import numpy as np
 
 # setting path
 sys.path.append('..')
@@ -7,17 +8,20 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
+from y_n import calc_y_n
+from upsilon_n import upsilon_n
 
 def Ojeda():
     model_name = 'Ojeda'
-    param_dict = {
-        'k_ads': 0.1 / ( 1e6**0.5 * e**( - 5e4 / (8.314*500) ) ),
-        'H_ads': 5e4, # J/mol
-        'A_HCs_1': ( 4.7e-5 / 5.12 / 1000 ) / ( 1e6**2 * e**( - 1e5 / (8.314*500) ) ),
-        'E_HCs_1': 1e5, # J/mol
-        'A_HCs_2': ( 4.7e-5 / 5.12 / 1000 ) / ( 1e6**3 * e**( - 1e5 / (8.314*500) ) ),
-        'E_HCs_2': 1e5, # J/mol
-    }
+    params = [4.71867450e-06, 0.00000000e+00, 4.21236351e+00, 1.76426793e+05,
+       6.05777356e+01, 1.21647692e+05]
+    param_dict = {'k_ads':   params[0],
+                  'H_ads':   params[1],
+                  'A_HCs_1': params[2]*1000,
+                  'E_HCs_1': params[3],
+                  'A_HCs_2': params[4]*1000,
+                  'E_HCs_2': params[5],
+                 }
     
     bnds = {
         'k_ads': (0, None),
@@ -27,11 +31,7 @@ def Ojeda():
         'A_HCs_2': (0, None),
         'E_HCs_2': (0, None),
     }
-    
-    beta_0 = 48.45
-    beta_1 = -0.09191
-    beta_2 = -0.7489
-    
+
     model = KineticModel(model_name, params = param_dict, bnds = bnds)
 
     n_parafins = {}
@@ -60,20 +60,12 @@ def Ojeda():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
             
-            alfa = 1/(1 + e**-(beta_0 + beta_1*T + beta_2*F_H2/F_CO))
-            
-            upsilon_exp = -3.303 + 0.4139*n + 3.391*(n == 2) + 21.01*(n == 3)
-            upsilon_n = 1/(1 + (1 - (n == 1)) * e**-upsilon_exp)
-    
-            Kc2 = 204.08 - 0.3960*T
-            Kc3 = 88.47  - 0.1737*T
-    
-            y_n = (1-alfa)*alfa**(n - 1 + Kc2*(n == 2) + Kc3*(n == 3))
+            y_n = calc_y_n(n, T, F_H2/F_CO)
             
             K_ads = k_ads   * e**(-H_ads   / (R * T))
             k1    = A_HCs_1 * e**(-E_HCs_1 / (R * T))
             k2    = A_HCs_2 * e**(-E_HCs_2 / (R * T))
-            r     = y_n * upsilon_n * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n * upsilon_n(n) * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
             return r
     
         reaction = Reaction(
@@ -107,20 +99,12 @@ def Ojeda():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
             
-            alfa = 1/(1 + e**-(beta_0 + beta_1*T + beta_2*F_H2/F_CO))
-            
-            upsilon_exp = -3.303 + 0.4139*n + 3.391*(n == 2) + 21.01*(n == 3)
-            upsilon_n = 1/(1 + (1 - (n == 1)) * e**-upsilon_exp)
-    
-            Kc2 = 204.08 - 0.3960*T
-            Kc3 = 88.47  - 0.1737*T
-    
-            y_n = (1-alfa)*alfa**(n - 1 + Kc2*(n == 2) + Kc3*(n == 3))
+            y_n = calc_y_n(n, T, F_H2/F_CO)
             
             K_ads = k_ads   * e**(-H_ads   / (R * T))
             k1    = A_HCs_1 * e**(-E_HCs_1 / (R * T))
             k2    = A_HCs_2 * e**(-E_HCs_2 / (R * T))
-            r     = y_n * (1 - upsilon_n) * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n * (1 - upsilon_n(n)) * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
             return r
     
         reaction = Reaction(
