@@ -1,6 +1,7 @@
 import numpy as np
 
-def upsilon_n(n):
-    exponential = np.exp ( - ( -3.303 + 0.4139 * n + 3.391 * ( n == 2 ) + 21.01 * ( n == 3 ) ) )
-    upsilon_n = 1 / ( 1 + ( 1 - ( n == 1 ) ) * exponential )
-    return upsilon_n
+beta = np.load('params_upsilon.npy')
+
+def upsilon_n(n, T):
+    exponent = beta[0] + beta[1] * n + beta[2] * T + beta[3] * ( n == 2 )
+    return 1 / ( 1 + ( 1 - ( ( n == 1 ) | ( n == 3 ) ) ) * np.exp( - exponent ) )

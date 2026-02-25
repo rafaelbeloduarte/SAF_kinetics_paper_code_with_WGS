@@ -8,7 +8,7 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
-from y_n import calc_y_n
+from y_n import y_n_distribution
 from upsilon_n import upsilon_n
 
 def Yates():
@@ -53,7 +53,7 @@ def Yates():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            y_n = calc_y_n(n, T, F_H2/F_CO)
+            y_n = y_n_distribution(T, F_H2/F_CO, n_parafins.values())[n]
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
@@ -89,7 +89,7 @@ def Yates():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            y_n = calc_y_n(n, T, F_H2/F_CO)
+            y_n = y_n_distribution(T, F_H2/F_CO, n_parafins.values())[n]
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
