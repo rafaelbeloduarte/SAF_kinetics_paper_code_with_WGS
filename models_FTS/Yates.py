@@ -8,17 +8,15 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
-from y_n import y_n_distribution
+from y_n import y_n
 from upsilon_n import upsilon_n
 
 def Yates():
     model_name = 'Yates'
-    # params = [3.92008633e-06, 0.00000000e+00, 5.82506680e+01, 1.80929218e+05]
-    params = [3.46203234e-05, 4.84038632e-02, 1.02031093e+01, 1.56890130e+05]
-    param_dict = {'k_ads': params[0],
-                     'H_ads': params[1],
-                     'A_HCs': params[2]*1000,
-                     'E_HCs': params[3]}
+    param_dict =  {'k_ads': np.float64(7.680839182541996e-06),
+  'H_ads': np.float64(-328.06949782282356),
+  'A_HCs': np.float64(2131596.545566567),
+  'E_HCs': np.float64(197251.38093087194)}
 
     bnds = {
         'k_ads': (0, None), # 1/Pa
@@ -53,11 +51,9 @@ def Yates():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            y_n = y_n_distribution(T, F_H2/F_CO, n_parafins.values())[n]
-
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * upsilon_n(n) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n(n) * upsilon_n(n, T) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
             return r
 
         reaction = Reaction(
@@ -93,7 +89,7 @@ def Yates():
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * (1 - upsilon_n(n)) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n(n) * (1 - upsilon_n(n, T)) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
             return r
 
         reaction = Reaction(

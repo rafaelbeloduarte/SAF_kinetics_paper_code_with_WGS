@@ -10,6 +10,7 @@ from y_n import y_n
 from upsilon_n import upsilon_n
 import datetime
 import time
+import numpy as np
 
 
 # if __name__ == "__main__":
@@ -92,6 +93,8 @@ N = list(set(list(n_parafins.values()) + list(n_olefins.values())))
 
 rxn_set = hy_case.BasisManager.ReactionPackageManager.ReactionSets.Item('FTS')
 
+F2 = hy_ms.Item('F2')
+
 T = F2.TemperatureValue + 273.15
 
 alpha = float(np.load('param_alpha.npy'))
@@ -103,7 +106,10 @@ ALPHA_SHEET.Cell(0,0).CellValue = alpha
 # must multiply reaction rate by correction factor below
 # because hysys bases reaction rate only on the gas phase, not the catalyst volume
 vol_cat_to_vol_gas =  (1 / reactor.VoidFraction) - 1 # m³ cat / m³ gas
-overall_freq_fact = 0.7771401117743281 # kmol / s / m³ cat / Pa²
+overall_freq_fact = 685.4303638787276 # mol / s / kg cat / Pa²
+packing = 1157 # kg / m³
+kmol_to_mol = 1 / 1000 # kmol / mol
+overall_freq_fact = overall_freq_fact * packing * kmol_to_mol # kmol / s / m³ cat / Pa²
 
 for component, n in n_parafins.items():
     freq_fact = n * y_n(n) * upsilon_n(n, T) * overall_freq_fact * vol_cat_to_vol_gas # kmol / s / m³ gas / Pa²

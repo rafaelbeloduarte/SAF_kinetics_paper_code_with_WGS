@@ -8,17 +8,15 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
-from y_n import calc_y_n
+from y_n import y_n
 from upsilon_n import upsilon_n
 
 def PowerLaw():
     model_name = 'PowerLaw'
-    params = [4.30898499e+09, 1.52907636e+05, 0.00000000e+00, 0.00000000e+00]
-    param_dict = {'A_HCs': params[0]*1000,
-                  'E_HCs': params[1],
-                  'a':     params[2],
-                  'b':     params[3],
-                 }
+    param_dict = {'A_HCs': np.float64(0.11772038345572038),
+  'E_HCs': np.float64(25783.63583576965),
+  'a': np.float64(-678.0674059591603),
+  'b': np.float64(0.2079548015752654)}
 
     bnds = {
         'A_HCs': (0, None), # mol/s/kg/Pa²
@@ -53,10 +51,8 @@ def PowerLaw():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            y_n = calc_y_n(n, T, F_H2/F_CO)
-
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * upsilon_n(n) * k_HCs * P_H2**a * P_CO**b
+            r     = y_n(n) * upsilon_n(n, T) * k_HCs * P_H2**a * P_CO**b
             return r
 
         reaction = Reaction(
@@ -88,10 +84,8 @@ def PowerLaw():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            y_n = calc_y_n(n, T, F_H2/F_CO)
-
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * (1 - upsilon_n(n)) * k_HCs * P_H2**a * P_CO**b
+            r     = y_n(n) * (1 - upsilon_n(n, T)) * k_HCs * P_H2**a * P_CO**b
             return r
 
         reaction = Reaction(

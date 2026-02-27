@@ -8,16 +8,15 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
-from y_n import calc_y_n
+from y_n import y_n
 from upsilon_n import upsilon_n
 
 def Botes():
     model_name = 'Botes'
-    params = [1.51130997e-01, 2.40188611e-03, 1.86775361e+07, 1.61546758e+05]
-    param_dict = {'k_ads': params[0],
-                     'H_ads': params[1],
-                     'A_HCs': params[2]*1000,
-                     'E_HCs': params[3]}
+    param_dict = {'k_ads': np.float64(0.03115866561341398),
+  'H_ads': np.float64(-72.6881364214574),
+  'A_HCs': np.float64(15145955.783439858),
+  'E_HCs': np.float64(149324.21228091035)}
 
     bnds = {
         'k_ads': (0, None), # 1/Pa
@@ -52,11 +51,9 @@ def Botes():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            y_n = calc_y_n(n, T, F_H2/F_CO)
-
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * upsilon_n(n) * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
+            r     = y_n(n) * upsilon_n(n, T) * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
             return r
 
         reaction = Reaction(
@@ -88,11 +85,9 @@ def Botes():
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
 
-            y_n = calc_y_n(n, T, F_H2/F_CO)
-
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n * (1 - upsilon_n(n)) * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
+            r     = y_n(n) * (1 - upsilon_n(n, T)) * k_HCs * P_H2**0.75 * P_CO**0.5 / (1 + K_ads * P_CO**0.5)**2
             return r
 
         reaction = Reaction(

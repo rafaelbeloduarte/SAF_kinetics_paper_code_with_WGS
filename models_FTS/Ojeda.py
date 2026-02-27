@@ -8,20 +8,17 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
-from y_n import calc_y_n
+from y_n import y_n
 from upsilon_n import upsilon_n
 
 def Ojeda():
     model_name = 'Ojeda'
-    params = [4.71867450e-06, 0.00000000e+00, 4.21236351e+00, 1.76426793e+05,
-       6.05777356e+01, 1.21647692e+05]
-    param_dict = {'k_ads':   params[0],
-                  'H_ads':   params[1],
-                  'A_HCs_1': params[2]*1000,
-                  'E_HCs_1': params[3],
-                  'A_HCs_2': params[4]*1000,
-                  'E_HCs_2': params[5],
-                 }
+    param_dict = {'k_ads': np.float64(2.838395313874119e-06),
+  'H_ads': np.float64(-0.01643909412067914),
+  'A_HCs_1': np.float64(403.67257240527465),
+  'E_HCs_1': np.float64(195058.5873251934),
+  'A_HCs_2': np.float64(1828.264747018951),
+  'E_HCs_2': np.float64(114567.42827486034)}
     
     bnds = {
         'k_ads': (0, None),
@@ -59,13 +56,11 @@ def Ojeda():
     
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
-            
-            y_n = calc_y_n(n, T, F_H2/F_CO)
-            
+                        
             K_ads = k_ads   * e**(-H_ads   / (R * T))
             k1    = A_HCs_1 * e**(-E_HCs_1 / (R * T))
             k2    = A_HCs_2 * e**(-E_HCs_2 / (R * T))
-            r     = y_n * upsilon_n(n) * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n(n) * upsilon_n(n, T) * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
             return r
     
         reaction = Reaction(
@@ -98,13 +93,11 @@ def Ojeda():
     
             F_H2 = x['hydrogen']*F
             F_CO = x['carbon monoxide']*F
-            
-            y_n = calc_y_n(n, T, F_H2/F_CO)
-            
+                        
             K_ads = k_ads   * e**(-H_ads   / (R * T))
             k1    = A_HCs_1 * e**(-E_HCs_1 / (R * T))
             k2    = A_HCs_2 * e**(-E_HCs_2 / (R * T))
-            r     = y_n * (1 - upsilon_n(n)) * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n(n) * (1 - upsilon_n(n, T)) * (k1 * P_H2 + k2) * P_CO / (1 + K_ads * P_CO)**2
             return r
     
         reaction = Reaction(
