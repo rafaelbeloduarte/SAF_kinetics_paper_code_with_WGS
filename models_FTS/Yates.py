@@ -13,19 +13,59 @@ from upsilon_n import upsilon_n
 
 def Yates():
     model_name = 'Yates'
-    param_dict =  {'k_ads': np.float64(7.680839182541996e-06),
-  'H_ads': np.float64(-328.06949782282356),
-  'A_HCs': np.float64(2131596.545566567),
-  'E_HCs': np.float64(197251.38093087194)}
+    param_dict = {'k_ads': np.float64(9.391002988056302e-06),
+                     'H_ads': np.float64(176.5086174668894),
+                     'A_HCs': np.float64(1009649.8294438411),
+                     'E_HCs': np.float64(194025.2209683125),
+                     'A_WGS': np.float64(455236184.0166035),
+                     'E_WGS': np.float64(205804.88690898253),
+                     'a_WGS': np.float64(0.012561729342251787),
+                     'b_WGS': np.float64(0.3667094149109895)}
 
     bnds = {
         'k_ads': (0, None), # 1/Pa
         'H_ads': (0, None), # J/mol
         'A_HCs': (0, None), # mol/s/kg/Pa²
         'E_HCs': (0, None), # J/mol
+        'A_WGS': (0, None), # mol/s/kg/Pa²
+        'E_WGS': (0, None), # J/mol
+        'a_WGS': (None, None),
+        'b_WGS': (None, None),
     }
 
     model = KineticModel(model_name, params = param_dict, bnds = bnds)
+
+    def rate_WGS(param_dict, T, P, x, F, K, eq_distance, R, data):
+        P_CO = x['carbon monoxide']*P
+        P_H2O = x['water']*P
+        P_CO2 = x['carbon dioxide']*P
+        P_H2 = x['hydrogen']*P
+
+        A_WGS = param_dict['A_WGS']
+        E_WGS = param_dict['E_WGS']
+        a = param_dict['a_WGS']
+        b = param_dict['b_WGS']
+
+        K_WGS = 1.45e-2 * np.exp( 4.62e3 / T )
+        k_WGS = A_WGS * np.exp ( - E_WGS / ( 8.314 * T ) )
+
+        rate_WGS = ( k_WGS * P_CO**a * P_H2O**b ) * eq_distance
+        return rate_WGS
+
+    WGS = Reaction(
+                     name = 'WGS',
+                     stoic = {
+                             'carbon monoxide': -1,
+                             'water': -1,
+                             'carbon dioxide': 1,
+                             'hydrogen': 1,
+                         },
+                     base_component = 'carbon monoxide',
+                     rate_function = rate_WGS,
+                     rate_unit = 'mol/s/kg',
+        )
+
+    model.add_reaction(WGS)
 
     n_parafins = {}
     for i, parafin in enumerate(parafins):
@@ -53,7 +93,7 @@ def Yates():
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n(n) * upsilon_n(n, T) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n(n, T) * upsilon_n(n, T) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
             return r
 
         reaction = Reaction(
@@ -89,7 +129,7 @@ def Yates():
 
             K_ads = k_ads * e**(-H_ads / (R * T))
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n(n) * (1 - upsilon_n(n, T)) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
+            r     = y_n(n, T) * (1 - upsilon_n(n, T)) * k_HCs * P_H2 * P_CO / (1 + K_ads * P_CO)**2
             return r
 
         reaction = Reaction(

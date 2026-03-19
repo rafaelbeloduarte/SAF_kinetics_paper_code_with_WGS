@@ -18,6 +18,7 @@ import itertools
 import logging
 import warnings
 import os
+import copy
 logger = logging.getLogger(__name__)
 
 def solve(self, model_name = ""):
@@ -46,10 +47,10 @@ def solve_gas(self):
         # functions expect DVar type temperature
         P = DVarType(max(1e-3, Yi[1]), 'P', self.units)
         T = DVarType(max(1e-3, Yi[2]), 'T', self.units) # T must be >= 0
-        if P.val < 1:
-            raise ValueError(f"Pressure of {P} is too low. Check your simulation.")
-        if T.val < 1:
-            raise ValueError(f"Temperature of {T} is too low. Check your simulation.")
+        # if P.val < 1:
+        #     raise ValueError(f"Pressure of {P} is too low. Check your simulation.")
+        # if T.val < 1:
+        #     raise ValueError(f"Temperature of {T} is too low. Check your simulation.")
         Fi = np.array(Yi[3:len(Yi)]).clip(min = self.minimal_F)
         F = sum(Fi)
         x = {component: Fi[i]/F for i, component in enumerate(self.component_list)}
@@ -96,10 +97,10 @@ def solve_gas(self):
         # functions expect DVar type temperature
         P = DVarType(max(1e-3, Yi[1]), 'P', self.units)
         T = DVarType(max(1e-3, Yi[2]), 'T', self.units) # T must be >= 0
-        if P.val < 1:
-            raise ValueError(f"Pressure of {P} is too low. Check your simulation.")
-        if T.val < 1:
-            raise ValueError(f"Temperature of {T} is too low. Check your simulation.")
+        # if P.val < 1:
+        #     raise ValueError(f"Pressure of {P} is too low. Check your simulation.")
+        # if T.val < 1:
+        #     raise ValueError(f"Temperature of {T} is too low. Check your simulation.")
         Fi = np.array(Yi[3:len(Yi)]).clip(min = self.minimal_F)
         F = sum(Fi)
         x = {component: Fi[i]/F for i, component in enumerate(self.component_list)}
@@ -1030,7 +1031,6 @@ def calc_rx_rates(self, T, P, x, F):
     """
     ''
     for reaction in self.model.reactions:
-
         eta = self.model.reactions[reaction].eff_factor
         K_eq = self.model.reactions[reaction].equilibrium_constant
         R = self.R.val # give R to the user in the correct units
@@ -1041,14 +1041,14 @@ def calc_rx_rates(self, T, P, x, F):
         product_x = 1
         for component in self.model.reactions[reaction].component_names:
             stoic_i = self.model.reactions[reaction].stoic[component]
-            product_x = product_x * x[component]**stoic_i
+            product_x = product_x * max(1e-5, x[component])**stoic_i
         # the distance from equilibrium
         eq_distance = min(1, ( P / P_ref[self.units] )**stoic * product_x / K_eq)
         eq_distance = 1 - eq_distance
         self.model.reactions[reaction].eq_distance = eq_distance
         # print(epsilon)
         # clear_output(wait=True)
-
+        # print(reaction, self.model.reactions[reaction].rate_function(kin_param_dict, T, P, x, F, K_eq, eq_distance, R, data))
         try:
             rate = eta*self.model.reactions[reaction].rate_function(kin_param_dict, T, P, x, F, K_eq, eq_distance, R, data)
         except Exception as exception:
@@ -1171,6 +1171,7 @@ class PBR:
         PBR.ploteq = ploteq
         PBR.calc_conversions = calc_conversions
         PBR.parametric_study = parametric_study
+        PBR.create_csv_template = create_csv_template
 
         self.valid_unit_systems = ('SI', 'cgs')
         self.units = units # if units changed must reset it

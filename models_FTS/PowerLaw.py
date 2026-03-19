@@ -13,19 +13,59 @@ from upsilon_n import upsilon_n
 
 def PowerLaw():
     model_name = 'PowerLaw'
-    param_dict = {'A_HCs': np.float64(0.11772038345572038),
-  'E_HCs': np.float64(25783.63583576965),
-  'a': np.float64(-678.0674059591603),
-  'b': np.float64(0.2079548015752654)}
+    param_dict = {'A_HCs': np.float64(8098.511991637293),
+                     'E_HCs': np.float64(71469.73111498474),
+                     'a': np.float64(-2.831819643321635e-15),
+                     'b': np.float64(-9.405858378897698e-17),
+                     'A_WGS': np.float64(9277835041.744276),
+                     'E_WGS': np.float64(115056.2134829678),
+                     'a_WGS': np.float64(0.11744709084993102),
+                     'b_WGS': np.float64(-0.593860682495843)}
 
     bnds = {
         'A_HCs': (0, None), # mol/s/kg/Pa²
         'E_HCs': (0, None), # J/mol
         'a': (0, None),
         'b': (0, None),
+        'A_WGS': (0, None), # mol/s/kg/Pa²
+        'E_WGS': (0, None), # J/mol
+        'a_WGS': (None, None),
+        'b_WGS': (None, None),
     }
 
     model = KineticModel(model_name, params = param_dict, bnds = bnds)
+
+    def rate_WGS(param_dict, T, P, x, F, K, eq_distance, R, data):
+        P_CO = x['carbon monoxide']*P
+        P_H2O = x['water']*P
+        P_CO2 = x['carbon dioxide']*P
+        P_H2 = x['hydrogen']*P
+
+        A_WGS = param_dict['A_WGS']
+        E_WGS = param_dict['E_WGS']
+        a = param_dict['a_WGS']
+        b = param_dict['b_WGS']
+
+        K_WGS = 1.45e-2 * np.exp( 4.62e3 / T )
+        k_WGS = A_WGS * np.exp ( - E_WGS / ( 8.314 * T ) )
+
+        rate_WGS = ( k_WGS * P_CO**a * P_H2O**b ) * eq_distance
+        return rate_WGS
+
+    WGS = Reaction(
+                     name = 'WGS',
+                     stoic = {
+                             'carbon monoxide': -1,
+                             'water': -1,
+                             'carbon dioxide': 1,
+                             'hydrogen': 1,
+                         },
+                     base_component = 'carbon monoxide',
+                     rate_function = rate_WGS,
+                     rate_unit = 'mol/s/kg',
+        )
+
+    model.add_reaction(WGS)
 
     n_parafins = {}
     for i, parafin in enumerate(parafins):
@@ -52,7 +92,7 @@ def PowerLaw():
             F_CO = x['carbon monoxide']*F
 
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n(n) * upsilon_n(n, T) * k_HCs * P_H2**a * P_CO**b
+            r     = y_n(n, T) * upsilon_n(n, T) * k_HCs * P_H2**a * P_CO**b
             return r
 
         reaction = Reaction(
@@ -85,7 +125,7 @@ def PowerLaw():
             F_CO = x['carbon monoxide']*F
 
             k_HCs = A_HCs * e**(-E_HCs / (R * T))
-            r     = y_n(n) * (1 - upsilon_n(n, T)) * k_HCs * P_H2**a * P_CO**b
+            r     = y_n(n, T) * (1 - upsilon_n(n, T)) * k_HCs * P_H2**a * P_CO**b
             return r
 
         reaction = Reaction(

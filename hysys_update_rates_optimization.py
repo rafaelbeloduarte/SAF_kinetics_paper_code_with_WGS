@@ -6,118 +6,105 @@
 
 import os
 import win32com.client as win32
-from y_n import y_n
-from upsilon_n import upsilon_n
-import datetime
-import time
 import numpy as np
 
 
-# if __name__ == "__main__":
-
-# In[2]:
+# In[ ]:
 
 
-parafins = [ 'methane', 'ethane', 'propane', 
-             'butane', 'pentane', 'hexane', 
-               'heptane', 'octane', 
-             'nonane', 'decane', 'undecane', 'dodecane',
-               'tridecane', 'tetradecane', 'pentadecane', 'hexadecane', 'heptadecane',
-               'octadecane', 'nonadecane', 'eicosane', 'heneicosane', 'docosane',
-               'tricosane', 'tetracosane', 'pentacosane',
-               'hexacosane', 'heptacosane',
-               'octacosane', 'nonacosane', 'triacontane', 
-             'hentriacontane', 'dotriacontane',
-               'tritriacontane', 'tetratriacontane', 'pentatriacontane', 'hexatriacontane'
-            ]
+if __name__ == "__main__":
+    beta = [-13.53235038,   0.33045452,   0.02174398,   2.30345345]
 
-olefins = [ 'ethylene', 
-            'propene',
-            '1-butene', '1-pentene', '1-hexene',
-            '1-heptene', '1-octene', 
-            '1-nonene', '1-decene',
-            '1-undecene', '1-dodecene',
-            '1-tridecene', '1-tetradecene', '1-pentadecene',
-            '1-hexadecene', '1-heptadecene', '1-octadecene',
-          ]
+    def upsilon_n(n, T):
+        exponent = beta[0] + beta[1] * n + beta[2] * T + beta[3] * ( n == 2 )
+        return 1 / ( 1 + ( 1 - ( ( n == 1 ) | ( n == 3 ) ) ) * np.exp( - exponent ) )
 
-others = ['carbon monoxide', 'hydrogen', 'water']
+    param_alpha = [1.62628872e+00, -1.49497171e-03]
 
+    def y_n(n, T):
+        alpha = param_alpha[0] + param_alpha[1] * T
+        return ( 1 - alpha ) * alpha ** ( n - 1 )
 
-# In[3]:
+    parafins = [ 'methane', 'ethane', 'propane', 
+                 'butane', 'pentane', 'hexane', 
+                   'heptane', 'octane', 
+                 'nonane', 'decane', 'undecane', 'dodecane',
+                   'tridecane', 'tetradecane', 'pentadecane', 'hexadecane', 'heptadecane',
+                   'octadecane', 'nonadecane', 'eicosane', 'heneicosane', 'docosane',
+                   'tricosane', 'tetracosane', 'pentacosane',
+                   'hexacosane', 'heptacosane',
+                   'octacosane', 'nonacosane', 'triacontane', 
+                 'hentriacontane', 'dotriacontane',
+                   'tritriacontane', 'tetratriacontane', 'pentatriacontane', 'hexatriacontane'
+                ]
 
+    olefins = [ 'ethylene', 
+                'propene',
+                '1-butene', '1-pentene', '1-hexene',
+                '1-heptene', '1-octene', 
+                '1-nonene', '1-decene',
+                '1-undecene', '1-dodecene',
+                '1-tridecene', '1-tetradecene', '1-pentadecene',
+                '1-hexadecene', '1-heptadecene', '1-octadecene',
+              ]
 
-hysys = win32.Dispatch("HYSYS.Application")
+    others = ['carbon monoxide', 'hydrogen', 'water']
 
+    hysys = win32.Dispatch("HYSYS.Application")
 
-# In[4]:
+    hy_case = hysys.Application.ActiveDocument
+    hy_case.Visible = 1
 
+    hy_solver = hy_case.Solver
 
-hy_case = hysys.Application.ActiveDocument
-hy_case.Visible = 1
+    hy_f = hy_case.Flowsheet        
 
+    hy_ms = hy_f.MaterialStreams
+    hy_es = hy_f.EnergyStreams
 
-# In[5]:
+    reactor = hy_case.Flowsheet.Operations.Item('PFR-100')
 
+    n_parafins = {}
+    for i, parafin in enumerate(parafins):
+        n = i + 1
+        if n not in [4, 5, 6, 7, 8, 31, 32, 33, 34, 35, 36]:
+            n_parafins[parafin] = n
 
-hy_solver = hy_case.Solver
+    n_olefins = {}
+    for i, olefin in enumerate(olefins):
+        n = i + 2
+        if n not in [3, 4, 5, 6, 7, 8]:
+            n_olefins[olefin] = n
 
-hy_f = hy_case.Flowsheet        
+    N = list(set(list(n_parafins.values()) + list(n_olefins.values())))
 
-hy_ms = hy_f.MaterialStreams
-hy_es = hy_f.EnergyStreams
+    rxn_set = hy_case.BasisManager.ReactionPackageManager.ReactionSets.Item('FTS')
 
-reactor = hy_case.Flowsheet.Operations.Item('PFR-100')
+    F2 = hy_ms.Item('F2')
 
+    T = F2.TemperatureValue + 273.15
 
-# In[6]:
+    alpha = param_alpha[0] + param_alpha[1] * T
 
+    ALPHA_SHEET = hy_case.Flowsheet.Operations.Item('ALPHA')
 
-n_parafins = {}
-for i, parafin in enumerate(parafins):
-    n = i + 1
-    if n not in [4, 5, 6, 7, 8, 31, 32, 33, 34, 35, 36]:
-        n_parafins[parafin] = n
+    ALPHA_SHEET.Cell(0,0).CellValue = alpha
 
-n_olefins = {}
-for i, olefin in enumerate(olefins):
-    n = i + 2
-    if n not in [3, 4, 5, 6, 7, 8]:
-        n_olefins[olefin] = n
+    # must multiply reaction rate by correction factor below
+    # because hysys bases reaction rate only on the gas phase, not the catalyst volume
+    vol_cat_to_vol_gas =  (1 / reactor.VoidFraction) - 1 # m³ cat / m³ gas
+    overall_freq_fact = 955.0608601894231 # mol / s / kg cat / Pa²
+    packing = 1157 # kg / m³
+    kmol_to_mol = 1 / 1000 # kmol / mol
+    overall_freq_fact = overall_freq_fact * packing * kmol_to_mol # kmol / s / m³ cat / Pa²
 
-N = list(set(list(n_parafins.values()) + list(n_olefins.values())))
+    for component, n in n_parafins.items():
+        freq_fact = n * y_n(n, T) * upsilon_n(n, T) * overall_freq_fact * vol_cat_to_vol_gas # kmol / s / m³ gas / Pa²
+        rxn_set.ReactionPackage.Reactions.Item(component).ForwardFrequencyFactor = freq_fact
+        print(f'updating rate for {component}')
 
-
-# In[7]:
-
-
-rxn_set = hy_case.BasisManager.ReactionPackageManager.ReactionSets.Item('FTS')
-
-F2 = hy_ms.Item('F2')
-
-T = F2.TemperatureValue + 273.15
-
-alpha = float(np.load('param_alpha.npy'))
-
-ALPHA_SHEET = hy_case.Flowsheet.Operations.Item('ALPHA')
-
-ALPHA_SHEET.Cell(0,0).CellValue = alpha
-
-# must multiply reaction rate by correction factor below
-# because hysys bases reaction rate only on the gas phase, not the catalyst volume
-vol_cat_to_vol_gas =  (1 / reactor.VoidFraction) - 1 # m³ cat / m³ gas
-overall_freq_fact = 685.4303638787276 # mol / s / kg cat / Pa²
-packing = 1157 # kg / m³
-kmol_to_mol = 1 / 1000 # kmol / mol
-overall_freq_fact = overall_freq_fact * packing * kmol_to_mol # kmol / s / m³ cat / Pa²
-
-for component, n in n_parafins.items():
-    freq_fact = n * y_n(n) * upsilon_n(n, T) * overall_freq_fact * vol_cat_to_vol_gas # kmol / s / m³ gas / Pa²
-    rxn_set.ReactionPackage.Reactions.Item(component).ForwardFrequencyFactor = freq_fact
-    print(f'updating rate for {component}')
-
-for component, n in n_olefins.items():
-    freq_fact = n * y_n(n) * ( 1 - upsilon_n(n, T) ) * overall_freq_fact * vol_cat_to_vol_gas # kmol / s / m³ / Pa²
-    rxn_set.ReactionPackage.Reactions.Item(component).ForwardFrequencyFactor = freq_fact
-    print(f'updating rate for {component}')
+    for component, n in n_olefins.items():
+        freq_fact = n * y_n(n, T) * ( 1 - upsilon_n(n, T) ) * overall_freq_fact * vol_cat_to_vol_gas # kmol / s / m³ / Pa²
+        rxn_set.ReactionPackage.Reactions.Item(component).ForwardFrequencyFactor = freq_fact
+        print(f'updating rate for {component}')
 
