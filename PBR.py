@@ -690,7 +690,7 @@ def plot(self, model_name = "",
                  ax = ax[0,0]
                 )
     ax[0,0].legend(fontsize = leg_fontsize, loc = leg_loc[0])
-    ax[0,0].set_xlabel('W')
+    ax[0,0].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[0,0].set_ylabel('X')
     ax[0,0].set_ylim(None, 1.05)
     ax[0,0].grid('both')
@@ -713,7 +713,7 @@ model_name].loc[
         ax[0,1].legend(handles[0:max_legends], labels[0:max_legends], fontsize = leg_fontsize, loc = leg_loc[1])
         ax[0,1].set_yscale(yscale)
         print('Too many legend labels, limiting the size to 10, others are hidden.')
-    ax[0,1].set_xlabel('W')
+    ax[0,1].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[0,1].set_ylabel(f'F ({Unit("F", self.units)})')
     ax[0,1].grid('both')
 
@@ -728,7 +728,7 @@ model_name].loc[
                  ax = ax[0,2]
                 )
     ax[0,2].legend(fontsize = leg_fontsize, loc = leg_loc[2])
-    ax[0,2].set_xlabel('W')
+    ax[0,2].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[0,2].set_ylabel('T (ºC)')
     ax[0,2].grid('both')
 
@@ -740,7 +740,7 @@ model_name].loc[
                  ax = ax[1,0]
                 )
     ax[1,0].legend(fontsize = leg_fontsize, loc = leg_loc[3])
-    ax[1,0].set_xlabel('W')
+    ax[1,0].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[1,0].set_ylabel(r'$Q_\text{cumulative}$' + f'({Unit("Power", self.units)})')
     ax[1,0].grid('both')
 
@@ -752,7 +752,7 @@ model_name].loc[
                  ax = ax[1,1]
                 )
     ax[1,1].legend(fontsize = leg_fontsize, loc = leg_loc[4])
-    ax[1,1].set_xlabel('W')
+    ax[1,1].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[1,1].set_ylabel(f'P ({Unit("P", self.units)})')
     ax[1,1].set_ylim(0, self.P0.val*1.1)
     ax[1,1].grid('both')
@@ -809,7 +809,7 @@ def ploteq(self, model_name = "",
                  ax = ax[0,0],
                  legend = False,
                 )
-    ax[0,0].set_xlabel('W')
+    ax[0,0].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[0,0].set_ylabel('X')
     ax[0,0].set_ylim(None, 1.05)
     ax[0,0].grid('both')
@@ -850,7 +850,7 @@ def ploteq(self, model_name = "",
         ax[0,1].legend(handles[0:max_legends], labels[0:max_legends], fontsize = leg_fontsize, loc = leg_loc[1])
         ax[0,1].set_yscale(yscale)
         print(f'Too many legend labels, limiting the size to {max_legends}, others are hidden.')
-    ax[0,1].set_xlabel('W')
+    ax[0,1].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[0,1].set_ylabel(f'F ({Unit("F", self.units)})')
     ax[0,1].grid('both')
 
@@ -865,7 +865,7 @@ def ploteq(self, model_name = "",
                  ax = ax[0,2]
                 )
     ax[0,2].legend(fontsize = leg_fontsize, loc = leg_loc[2])
-    ax[0,2].set_xlabel('W')
+    ax[0,2].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[0,2].set_ylabel('T (ºC)')
     ax[0,2].grid('both')
 
@@ -877,7 +877,7 @@ def ploteq(self, model_name = "",
                  ax = ax[1,0]
                 )
     ax[1,0].legend(fontsize = leg_fontsize, loc = leg_loc[3])
-    ax[1,0].set_xlabel('W')
+    ax[1,0].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[1,0].set_ylabel(r'$Q_\text{cumulative}$' + f'({Unit("Power", self.units)})')
     ax[1,0].grid('both')
 
@@ -889,7 +889,7 @@ def ploteq(self, model_name = "",
                  ax = ax[1,1]
                 )
     ax[1,1].legend(fontsize = leg_fontsize, loc = leg_loc[4])
-    ax[1,1].set_xlabel('W')
+    ax[1,1].set_xlabel(f'W ({Unit("m", self.units)})')
     ax[1,1].set_ylabel(f'P ({Unit("P", self.units)})')
     ax[1,1].set_ylim(0, self.P0.val*1.1)
     ax[1,1].grid('both')
@@ -1041,7 +1041,7 @@ def calc_rx_rates(self, T, P, x, F):
         product_x = 1
         for component in self.model.reactions[reaction].component_names:
             stoic_i = self.model.reactions[reaction].stoic[component]
-            product_x = product_x * max(1e-5, x[component])**stoic_i
+            product_x = product_x * x[component]**stoic_i
         # the distance from equilibrium
         eq_distance = min(1, ( P / P_ref[self.units] )**stoic * product_x / K_eq)
         eq_distance = 1 - eq_distance

@@ -10,6 +10,7 @@ from Reaction import Reaction
 from models_FTS.components import parafins, olefins, others
 from y_n import y_n
 from upsilon_n import upsilon_n
+from models_FTS.chain_length import n_parafins, n_olefins
 
 def PowerLaw():
     model_name = 'PowerLaw'
@@ -66,16 +67,6 @@ def PowerLaw():
         )
 
     model.add_reaction(WGS)
-
-    n_parafins = {}
-    for i, parafin in enumerate(parafins):
-        n = i + 1
-        n_parafins[parafin] = n
-
-    n_olefins = {}
-    for i, olefin in enumerate(olefins):
-        n = i + 1
-        n_olefins[olefin] = n
 
     for parafin in n_parafins:
         n = n_parafins[parafin]

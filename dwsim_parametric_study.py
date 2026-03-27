@@ -38,7 +38,7 @@ def simulate_point(index, row, dwsim_path, sim_path):
     syncrude_phase = syncrude.GetPhase('Overall')
     PFR_1 = Flowsheet.GetFlowsheetSimulationObject('PFR-1').GetAsObject()
     E_reactor = Flowsheet.GetFlowsheetSimulationObject('E1').GetAsObject()
-    PFR_1.set_dV(0.5)
+    PFR_1.set_dV(0.02)
 
     # Set parameters
     H2.SetMolarFlow(row['F_H2_in'])

@@ -8,6 +8,7 @@ from KineticModel import KineticModel
 from Reaction import Reaction
 
 from models_FTS.components import parafins, olefins, others
+from models_FTS.chain_length import n_parafins, n_olefins
 from y_n import y_n
 from upsilon_n import upsilon_n
 
@@ -66,16 +67,6 @@ def Mousavi():
         )
 
     model.add_reaction(WGS)
-
-    n_parafins = {}
-    for i, parafin in enumerate(parafins):
-        n = i + 1
-        n_parafins[parafin] = n
-
-    n_olefins = {}
-    for i, olefin in enumerate(olefins):
-        n = i + 1
-        n_olefins[olefin] = n
 
     for parafin in n_parafins:
         n = n_parafins[parafin]

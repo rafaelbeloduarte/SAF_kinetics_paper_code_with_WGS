@@ -2,7 +2,7 @@ import clr
 import os
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 from concurrent.futures import ProcessPoolExecutor
 from sklearn.model_selection import ParameterGrid
 
@@ -17,6 +17,7 @@ def simulate_point(index, row, dwsim_path, sim_path):
     # Add DWSIM references inside the worker
     clr.AddReference(os.path.join(dwsim_path, "DWSIM.Automation.dll"))
     clr.AddReference(os.path.join(dwsim_path, "DWSIM.Interfaces.dll"))
+    clr.AddReference(os.path.join(dwsim_path, "ThermoCS\\ThermoCS.dll"))
     from DWSIM.Automation import Automation3
 
     # Initialize Automation and Load Flowsheet locally for this process
@@ -28,25 +29,15 @@ def simulate_point(index, row, dwsim_path, sim_path):
     CO = Flowsheet.GetFlowsheetSimulationObject('CO').GetAsObject()
     compressor = Flowsheet.GetFlowsheetSimulationObject('C-1').GetAsObject()
     cooler = Flowsheet.GetFlowsheetSimulationObject('CL-1').GetAsObject()
-    C1_C8 = Flowsheet.GetFlowsheetSimulationObject('C1-C8').GetAsObject()
-    C9_C15 = Flowsheet.GetFlowsheetSimulationObject('C9-C15').GetAsObject()
-    C16p = Flowsheet.GetFlowsheetSimulationObject('C16p').GetAsObject()
-    unreacted_syngas = Flowsheet.GetFlowsheetSimulationObject('unreacted syngas').GetAsObject()
-    CO2 = Flowsheet.GetFlowsheetSimulationObject('CO2').GetAsObject()
-    H2O = Flowsheet.GetFlowsheetSimulationObject('H2O').GetAsObject()
     syncrude = Flowsheet.GetFlowsheetSimulationObject('syncrude').GetAsObject()
     syncrude_phase = syncrude.GetPhase('Overall')
     PFR_1 = Flowsheet.GetFlowsheetSimulationObject('PFR-1').GetAsObject()
     E_reactor = Flowsheet.GetFlowsheetSimulationObject('E1').GetAsObject()
     PFR_1.set_dV(0.02)
-
-    phi_T = row['phi_220C'] * ( 
-        ( 493 / row['T_K'] ) * np.exp( - ( 147203.9 / 8.314 ) * ( 1/row['T_K'] - 1/493 ) ) 
-    ) ** (1/2)
-    eff = np.tanh(phi_T)/phi_T
+    PFR_1.Volume = row['V_m3'] # m3
 
     # hacking the catalyst load to set the effectiveness factor, can do this because r = r' * rho_c
-    PFR_1.CatalystLoading = 1648 * eff # kg/m³
+    PFR_1.CatalystLoading = 1648 * row['eff'] # kg/m³
 
     # Set parameters
     H2.SetMolarFlow(row['F_H2_in'])
@@ -64,14 +55,6 @@ def simulate_point(index, row, dwsim_path, sim_path):
     # Collect results
     results = {}
     results['Reactor Energy Flow (kW)'] = E_reactor.EnergyFlow
-    results['CO in mass flow (kg/d)'] = CO.GetMassFlow() * 86400
-    results['H2 in mass flow (kg/d)'] = H2.GetMassFlow() * 86400
-    results['C1-C8 mass flow (kg/d)'] = C1_C8.GetMassFlow() * 86400
-    results['C9-C15 mass flow (kg/d)'] = C9_C15.GetMassFlow() * 86400
-    results['C16p mass flow (kg/d)'] = C16p.GetMassFlow() * 86400
-    results['unreacted syngas mass flow (kg/d)'] = unreacted_syngas.GetMassFlow() * 86400
-    results['water mass flow (kg/d)'] = H2O.GetMassFlow() * 86400
-    results['CO2 mass flow (kg/d)'] = CO2.GetMassFlow() * 86400
     
     for component in syncrude_phase.Compounds.keys():
         results[f'F_{component}_out_dwsim'] = syncrude_phase.Compounds[component].MolarFlow
@@ -83,7 +66,7 @@ def parametric_study(parametric_data, num_workers, dwsim_path, sim_path):
     # Determine number of workers (e.g., 4 or use os.cpu_count())
     num_workers = num_workers
     
-    print(f"Starting parallel simulation with {num_workers} workers...")
+    tqdm.write(f"Starting parallel simulation with {num_workers} workers...")
     
     # Prepare the list of tasks
     tasks = [(idx, row, dwsim_path, sim_path) for idx, row in parametric_data.iterrows()]
@@ -100,5 +83,5 @@ def parametric_study(parametric_data, num_workers, dwsim_path, sim_path):
             for col, val in res.items():
                 parametric_data.loc[idx, col] = val
 
-    print("Simulations complete.")
+    tqdm.write("Simulations complete.")
     return parametric_data
