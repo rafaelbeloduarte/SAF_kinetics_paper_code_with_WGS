@@ -1,6 +1,5 @@
 .python-version
 *.HUV
-*.dwxmz
 *.png
 *.bk0
 *.hsc
@@ -10,12 +9,9 @@
 *.hdf
 *.xlsx
 *.txt
-*.pkl
-*.csv
 .ipynb_checkpoints/
 backup/
 **/__pycache__/
 *.pdf
 *.pgf
-*.ods
 *.xlsx#
