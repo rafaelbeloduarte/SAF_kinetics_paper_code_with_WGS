@@ -59,8 +59,8 @@ if __name__ == '__main__':
     kinetic_data = kinetic_data.loc[kinetic_data.CINÉTICA == True].copy()
     
     # Paths
-    dwsim_path =  r"C:\Users\rafae\AppData\Local\DWSIM\\"
-    sim_path = r"C:\Users\rafae\Documents\Rafael Duarte\SAF_kinetics_paper_code_with_WGS\SAF_kinetics_paper_code_with_WGS\dwsim_bench_model.dwxmz"
+    dwsim_path = r"C:\Users\user\AppData\Local\DWSIM\\"
+    sim_path = r"Z:\GoogleDrive\uem\Doutorado\Ensaios\SAF\SAF_8_08_08_2025\SAF_kinetics_paper_code_with_WGS\dwsim_bench_model.dwxmz"
     
     # Determine number of workers (e.g., 4 or use os.cpu_count())
     num_workers = 23

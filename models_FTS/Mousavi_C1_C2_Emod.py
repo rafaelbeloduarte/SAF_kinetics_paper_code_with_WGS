@@ -55,7 +55,9 @@ def Mousavi():
         K_WGS = 1.45e-2 * np.exp( 4.62e3 / T )
         k_WGS = A_WGS * np.exp ( - E_WGS / ( 8.314 * T ) )
 
-        rate_WGS = ( k_WGS * P_CO**a * P_H2O**b ) * eq_distance
+        eq_dist = 1 - P_CO2 * P_H2 / ( K_WGS * max(10, P_CO) * max(10, P_H2O) )
+        
+        rate_WGS = ( k_WGS * P_CO**a * P_H2O**b ) * eq_dist
         return rate_WGS
 
     WGS = Reaction(

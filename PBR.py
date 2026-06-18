@@ -1039,12 +1039,13 @@ def calc_rx_rates(self, T, P, x, F):
         stoic = sum(self.model.reactions[reaction].stoic.values())
         P_ref = {'SI': 1e5, 'cgs': 1e6}
         product_x = 1
-        for component in self.model.reactions[reaction].component_names:
-            stoic_i = self.model.reactions[reaction].stoic[component]
-            product_x = product_x * x[component]**stoic_i
+        # for component in self.model.reactions[reaction].component_names:
+        #     stoic_i = self.model.reactions[reaction].stoic[component]
+        #     product_x = product_x * x[component]**stoic_i
         # the distance from equilibrium
-        eq_distance = min(1, ( P / P_ref[self.units] )**stoic * product_x / K_eq)
-        eq_distance = 1 - eq_distance
+        # eq_distance = min(1, ( P / P_ref[self.units] )**stoic * product_x / K_eq)
+        # eq_distance = 1 - eq_distance
+        eq_distance = 1
         self.model.reactions[reaction].eq_distance = eq_distance
         # print(epsilon)
         # clear_output(wait=True)

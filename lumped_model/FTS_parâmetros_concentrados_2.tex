@@ -1,0 +1,757 @@
+\documentclass[portuguese,12pt,a4paper,onecolumn]{article}
+\usepackage[T1]{fontenc}
+\usepackage[left=3cm, right=3cm, top=2cm, bottom=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{nameref}
+\usepackage[portuguese]{babel}
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks  = true, %Colours links instead of ugly boxes
+	linkcolor = blue,
+	urlcolor = blue,
+	citecolor = black,
+}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{graphicx,xcolor}
+\sisetup{	locale = FR,
+	text-series-to-math = true ,
+	propagate-math-font = true
+}
+\usepackage[version=4]{mhchem}
+\usepackage{chemmacros}
+\usepackage{chemfig}
+\chemsetup{
+	formula=mhchem,
+	reactions/tag-open=(R,
+	reactions/tag-close=),
+}
+\renewcommand\reactionautorefname{Reação}
+\usepackage{listings}
+% Configure style
+\lstset{
+	backgroundcolor=\color{gray!10},
+	basicstyle=\ttfamily\footnotesize,
+	breaklines=true,
+	numbers=left,
+	numberstyle=\tiny,
+	commentstyle=\color{green},
+	keywordstyle=\color{blue},
+	stringstyle=\color{purple}
+}
+\renewcommand{\lstlistingname}{Código-fonte}
+
+\title{Conversão do modelo distribuído de Síntese de Fischer-Tropsch para parâmetros concentrados}
+\author{Rafael Belo Duarte}
+\begin{document}
+	\maketitle
+	\section{Resumo do modelo de parâmetros distribuídos}
+	
+	Antes de mostrar o modelo de parâmetros concentrados (\autoref{lumped_model}) vamos resumir o de parâmetros distribuídos.
+	
+	\subsection{Reação de deslocamento}
+	
+	\begin{reaction}
+		CO + H2O <=> CO2 + H2
+		\label{reac:WGS}
+	\end{reaction}
+	
+	\begin{equation}
+		r_\mathrm{WGS}' = k_{\mathrm{WGS}}' P_{\ce{CO}}^a P_{\ce{H2O}}^b  \left(1 - \frac{1}{K_{\mathrm{WGS}}} \frac{P_{\ce{CO2}} P_{\ce{H2}}}{P_{\ce{CO}} P_{\ce{H2O}}} \right)
+		\label{eq:rate_CO2}
+	\end{equation}
+	
+	\begin{equation}
+		k'_\mathrm{WGS} = A_\mathrm{WGS}' \exp \left( \frac{-E_\mathrm{WGS}}{RT} \right)
+		\label{eq:k_WGS}
+	\end{equation}
+	
+	\begin{equation}
+		K_{\mathrm{WGS}} = \num{1.45e-2} \exp \left( \frac{\num{4.62e3}}{T} \right)
+		\label{eq:K_WGS}
+	\end{equation}
+	
+	\begin{table*}[!h]
+		\centering
+		\caption{Parâmetros da reação de deslocamento.}
+		\label{tab:params_WGS}
+		%	\resizebox{1\textwidth}{!}{%
+			\begin{tabular}{rrrr}
+				\toprule
+				$A_{\mathrm{WGS}}'$ (\unit{\mole \per \second \per \gram \per \pascal^{a+b}}) & $E_{\mathrm{WGS}}$ (\unit{\joule \per \mole}) & $a$ & $b$ \\
+				\midrule
+				\num{2.066E+06} & \num{164536} & \num{0.02} & \num{0.53} \\
+				\bottomrule
+			\end{tabular}%}
+	\end{table*}
+	
+	\subsection{Reações de síntese}
+	
+	\subsubsection{Reações}
+	
+	\paragraph{Parafinas}
+	\begin{reaction}
+		n CO + $(2n + 1)$ H2 -> C_n H_{2n+2} + n H2O
+	\end{reaction}
+	
+	\paragraph{Olefinas}
+	\begin{reaction}
+		n CO + $2 n$ H2 -> C_n H_{2n} + n H2O
+	\end{reaction}
+	
+	\subsubsection{Velocidades de reação}
+	
+	Nas equações das velocidades de reação $n$ é o comprimento de cadeia, $y_n$ (\autoref{eq:alpha}) a fração molar de hidrocarbonetos de tamanho de cadeia $n$ (excluídos os demais componentes: \ce{H2O}, \ce{CO2}, \ce{CO} e \ce{H2}), $r_\mathrm{HCs}'$ é velocidade global de formação de hidrocarbonetos (\autoref{eq:r_HCs}), e $\upsilon_n$ a probabilidade de hidrogenação (\autoref{eq:upsilon_n_logistic}).
+	
+	\paragraph{Parafinas}
+	\begin{equation}
+		r_{\mathrm{parafina},n} = y_n \upsilon_n r_{\mathrm{HCs}}'
+	\end{equation}
+	
+	\paragraph{Olefinas}
+	\begin{equation}
+		r_{\mathrm{olefina},n} = y_n (1 - \upsilon_n) r_{\mathrm{HCs}}'
+	\end{equation}
+	
+	\paragraph{Monóxido de carbono}
+	\begin{equation}
+		- r_{\ce{CO}}' = r_{\mathrm{WGS}}' + \sum_{n=1}^{n \geq 30} r_{\mathrm{HCs}}' n y_n
+	\end{equation}
+	
+	\paragraph{Hidrogênio}
+	\begin{equation}
+		-r_{\ce{H2}}' = \left(\sum_{n = 1}^{N} r_{\mathrm{HCs}}' [y_n (2n + \upsilon_n)]\right) - r_{\mathrm{WGS}}'
+		\label{eq:r_H2_simple}
+	\end{equation}
+	
+	\paragraph{Água}
+	\begin{equation}
+		r_{\ce{H2O}}' = \left(\sum_{n=1}^{n \geq 30} r_{\mathrm{HCs}}' n y_n\right) - r_{\mathrm{WGS}}'
+	\end{equation}
+	
+	\paragraph{Dióxido de carbono}
+	\begin{equation}
+		r_{\ce{CO2}}' = r_{\mathrm{WGS}}'
+	\end{equation}
+	
+	\paragraph{A velocidade de formação dos hidrocarbonetos}
+	
+	\begin{equation}
+		r_\mathrm{HCs}' = k' \frac{P_{\ce{H2}}^{0.75} P_{\ce{CO}}}{(1 + K_{\ce{CO}} P_{\ce{CO}})^2}
+		\label{eq:r_HCs}
+	\end{equation}
+	
+	\begin{equation}
+		k' = A_\mathrm{HCs}' \exp \left( \frac{-E_\mathrm{HCs}}{RT} \right)
+		\label{eq:k}
+	\end{equation}
+	
+	\begin{equation}
+		K_{\ce{CO}} = k_{\ce{CO}} \exp \left( \frac{-\Delta H_{\ce{CO}}}{RT} \right)
+		\label{eq:K_CO}
+	\end{equation}
+	
+	\colorbox{pink}{\parbox{\textwidth}{
+			\textbf{\underline{IMPORTANTE}}: Para os hidrocarbonetos com $n = 1$ e $n = 2$ substitua a energia de ativação da \autoref{eq:k} ($E_\mathrm{HCs}$) por $E_{\mathrm{C1}}$ e $E_{\mathrm{C2}}$ (\autoref{tab:params_Mousavi}), respectivamente.
+		}}
+	
+	\begin{table*}[!h]
+		\centering
+		\caption{Parâmetros das Equações \ref{eq:r_HCs}, \ref{eq:k} e \ref{eq:K_CO}.}
+		\label{tab:params_Mousavi}
+		\resizebox{1\textwidth}{!}{%
+			\begin{tabular}{rrrrrr}
+				\toprule
+				$k_{\ce{CO}}$ (\unit{\pascal^{-1}}) & $\Delta H_{\ce{CO}}$ (\unit{\joule \per \mole}) & $A_{\mathrm{HCs}}'$ (\unit{\mole \per \second \per \gram \per \pascal^{1.75}}) & $E_{\mathrm{HCs}}$ (\unit{\joule \per \mole}) & $E_{\mathrm{C1}}$ (\unit{\joule \per \mole}) & $E_{\mathrm{C2}}$ (\unit{\joule \per \mole}) \\
+				\midrule
+				\num{1.398E-05} & \num{933.0} & \num{9.551E-01} & \num{147204} & \num{142602} & \num{153273} \\
+				\bottomrule
+			\end{tabular}
+		}
+	\end{table*}
+		
+	\subsubsection{Distribuição dos hidrocarbonetos}
+	
+	\begin{equation}
+		y_n = (1 - \alpha) \alpha^{(n - 1)}
+		\label{eq:alpha}
+	\end{equation}
+	
+	$y_n$ é a fração molar do hidrocarboneto com $n$ carbonos. O $y_n$ representa exclusivamente a distribuição dos hidrocarbonetos, não estão inclusos o \ce{CO}, \ce{CO2}, \ce{H2} e \ce{H2O}.
+	
+	A probabilidade de crescimento de cadeia ($\alpha$) é:
+	
+	\begin{equation}
+		\alpha = \hat{\beta_0} + \hat{\beta_1} T
+	\end{equation}
+
+	Onde $T$ está em Kelvin e [$\hat{\beta_0}, \hat{\beta_1}] = [\num{1.626}, \qty{-1.495e-03}{\per \kelvin}]$.
+	
+	\subsubsection{Probabilidade de hidrogenação}
+	
+	\begin{equation}
+		\upsilon_n = \frac{1}{1 + [1 - (n \odot 1) - (n \odot 3)] \mathrm{exp}[-(\hat{\beta}_3 + \hat{\beta}_4 n + \hat{\beta}_5 T + \hat{\beta}_6 (n \odot 2))]}
+		\label{eq:upsilon_n_logistic}
+	\end{equation}
+	
+	Onde [$\hat{\beta}_3, \hat{\beta}_4, \hat{\beta}_5, \hat{\beta}_6$] = [-13,56; 0,3305; \qty{0,02179}{\per \kelvin}; 2,291]. O símbolo $\odot$ representa o operador XNOR, que retorna True (1) somente quando ambas as entradas são idênticas. O termo $[1 - (n \odot 1) - (n \odot 3)]$ serve para forçar $\upsilon = 1$ para metano e propano. Essa expressão permite que o modelo descreva a proporção de etano e propano maior do que a esperada em comparação com o restante da distribuição. A \autoref{eq:upsilon_n_logistic} pode ser inserida em um simulador por meio da criação de uma planilha ou usando \textit{scripts} internos, uma funcionalidade presente tanto no DWSIM quanto no Aspen Hysys.
+	
+	\textbf{No modelo de parâmetros concentrados esta equação não será necessária}, pois estaremos interessados apenas em estimar a produção de hidrocarbonetos por tamanho de cadeia, descartando esta distinção entre hidrocarbonetos saturados e insaturados.
+	
+	\newpage
+	
+	\section{O modelo de parâmetros concentrados}
+	\label{lumped_model}
+	
+	\subsection{Definição das frações do produto}
+	
+	Para criar o modelo de parâmetros concentrados, os produtos foram agrupados por tamanho de cadeia de acordo com a \autoref{tab:fracoes}.
+	
+	\begin{table*}[!h]
+		\centering
+		\caption{Frações do produto no modelo de parâmetros concentrados.}
+		\label{tab:fracoes}
+		\begin{tabular}{cc}
+			\hline
+			Produto & Tamanho de cadeia ($n$) \\
+			\hline
+			Gases & 1 - 4 \\
+			Gasolina & 5 - 10 \\
+			Querosene & 11 - 16 \\
+			Diesel & 17 - 20 \\
+			Parafinas pesadas & 21 + \\
+			\hline
+		\end{tabular}
+	\end{table*}
+	
+	\subsection{Criação de pseudo-componentes no DWSIM}
+	
+	Para agrupar os componentes vamos primeiro realizar uma simulação usando o modelo de parâmetros distribuídos, separando os produtos por tamanho de cadeia. Destas correntes criamos os pseudo-componentes que serão usados para validar o modelo de parâmetros concentrados.
+	
+	Três informações são necessárias para criar os pseudo-componentes: a massa molar, a densidade relativa a \qty{60}{\degree F} (\qty{15,5556}{\degreeCelsius}) e o ponto de bolha, contidos na \autoref{tab:simul_pseudo_comps}.
+	
+	\begin{table*}[!h]
+		\centering
+		\caption{Resultados de uma simulação usando o modelo de parâmetros distribuídos a \qty{20}{\bar}, \qty{240}{\degreeCelsius} e com \ce{H2}/\ce{CO} = 2.}
+		\label{tab:simul_pseudo_comps}
+		\resizebox{\textwidth}{!}{%
+			\begin{tabular}{lllllll}
+				\hline
+				Pseudo-componente         & querosene   & parafinas pesadas & gasolina   & gases       & diesel      & Unidade \\ \hline
+				Temperatura               & 15,5556     & 15,5556           & 15,5556    & 15,5556     & 15,5556     & \unit{\degreeCelsius}     \\
+				Pressão                   & 1           & 1                 & 1          & 1           & 1           & atm   \\
+				Vazão mássica             & 0,00422758  & 0,00239809        & 0,00510504 & 0,00267842  & 0,00160822  & \unit{\kilogram~d^{-1}}  \\
+				Vazão molar               & 2,69644E-07 & 7,79018E-08       & 5,9037E-07 & 1,15091E-06 & 7,18772E-08 & \unit{\mol \per \second} \\
+				Vazão Volumétrica         & 3,87331E-06 & 2,20618E-06       & 5,1551E-06 & 0,00163585  & 1,42698E-06 & \unit{\liter \per \minute} \\
+				Densidade da mistura      & 0,757963    & 0,754853          & 0,687701   & 0,00113703  & 0,782641    & \unit{\gram \per \centi \meter \cubed} \\
+				Peso molecular da mistura & 181,463     & 356,29            & 100,083    & 26,9353     & 258,964     & \unit{\gram \per \mol} \\
+				\begin{tabular}[c]{@{}l@{}}Ponto de bolha \\ na pressão da corrente\end{tabular} & 220,807 & 385,251 & 67,024 & -156,049 & 318,332 & \unit{\degreeCelsius} \\ \hline
+			\end{tabular}%
+		}
+	\end{table*}
+	
+	Para os componentes líquidos foi possível criar pseudo-componentes sem problema, mas para os gases o algoritmo retorna um pseudo-componente com fórmula \ce{C0H0}. Portanto, não vamos usar este pseudo-componente nas simulações, em seu lugar agruparemos as velocidades de reação do \ce{C2} ao \ce{C4} dentro da reação de formação do metano. As propriedades dos demais pseudo-componentes são fornecidas  na \autoref{tab:pseudo_props}.
+	
+	% Please add the following required packages to your document preamble:
+	% \usepackage{graphicx}
+	\begin{table}[!h]
+		\centering
+		\caption{Propriedades dos pseudo-componentes.}
+		\label{tab:pseudo_props}
+		\resizebox{\textwidth}{!}{%
+			\begin{tabular}{llllll}
+				\hline
+				BASIC PROPERTIES &
+				&
+				&
+				&
+				&
+				\\ \hline
+				Name &
+				gasolina &
+				querosene &
+				diesel &
+				pesados &
+				Unidades \\ \hline
+				Database &
+				DWSIM &
+				DWSIM &
+				DWSIM &
+				DWSIM &
+				\\
+				Type &
+				\begin{tabular}[c]{@{}l@{}}Petroleum Fraction \\ (Pseudocompound)\end{tabular} &
+				\begin{tabular}[c]{@{}l@{}}Petroleum Fraction \\ (Pseudocompound)\end{tabular} &
+				\begin{tabular}[c]{@{}l@{}}Petroleum Fraction \\ (Pseudocompound)\end{tabular} &
+				\begin{tabular}[c]{@{}l@{}}Petroleum Fraction \\ (Pseudocompound)\end{tabular} &
+				\\
+				CAS ID &
+				&
+				&
+				&
+				&
+				\\
+				Molecular Weight &
+				100,083 &
+				181,463 &
+				258,964 &
+				356,29 &
+				\\
+				Critical Temperature &
+				512,247151116108 &
+				667,094185221083 &
+				749,407462353205 &
+				781,834406669311 &
+				K \\
+				Critical Pressure &
+				3218488,97808149 &
+				1729493,86407653 &
+				1164581,37918558 &
+				750488,251805917 &
+				Pa \\
+				Critical Volume &
+				0,35700246352383 &
+				0,79940946941013 &
+				1,23826310774281 &
+				1,77741661629187 &
+				\unit{\meter \cubed \per \kilo \mol} \\
+				Critical Compressibility &
+				0,269794857423962 &
+				0,249282125304351 &
+				0,231448698092234 &
+				0,205214637636691 &
+				\\
+				Acentric Factor &
+				0,265064282200474 &
+				0,521473433695612 &
+				0,744391273847072 &
+				1,07231702954136 &
+				\\
+				\begin{tabular}[c]{@{}l@{}}Gibbs Energy of Formation \\ (Ideal Gas at 298.15 K)\end{tabular} &
+				-1179,11352640155 &
+				-979,104077152584 &
+				-923,137997948034 &
+				-916,910482319602 &
+				\unit{\kilo \joule \per \kilogram} \\
+				\begin{tabular}[c]{@{}l@{}}Enthalpy of Formation \\ (Ideal Gas at 298.15 K)\end{tabular} &
+				-2,1028883108762 &
+				-1,8421528395773 &
+				-1,85610400388881 &
+				-1,26097465419024 &
+				\unit{\kilo \joule \per \kilogram} \\
+				Normal Boiling Point &
+				340,174 &
+				493,957 &
+				591,482 &
+				658,401 &
+				K \\
+				&
+				&
+				&
+				&
+				&
+				\\ \hline
+				\begin{tabular}[c]{@{}l@{}}MODEL-SPECIFIC \\ PROPERTIES\end{tabular} &
+				&
+				&
+				&
+				&
+				\\ \hline
+				\begin{tabular}[c]{@{}l@{}}Chao Seader \\ Acentric Factor\end{tabular} &
+				0,265064282200474 &
+				0,521473433695612 &
+				0,744391273847072 &
+				1,07231702954136 &
+				\\
+				\begin{tabular}[c]{@{}l@{}}Chao Seader \\ Solubility Parameter\end{tabular} &
+				6,74732726610346 &
+				5,51637798217385 &
+				4,8923126589583 &
+				4,3130662093866 &
+				\\
+				\begin{tabular}[c]{@{}l@{}}Chao Seader \\ Liquid Molar Volume\end{tabular} &
+				134,61042873731 &
+				301,417198396027 &
+				463,576964325648 &
+				651,342364963486 &
+				\\
+				Rackett Compressibility &
+				0,269794857423962 &
+				0,249282125304351 &
+				0,231448698092234 &
+				0,205214637636691 &
+				\\
+				&
+				&
+				&
+				&
+				&
+				\\ \hline
+				\begin{tabular}[c]{@{}l@{}}PSEUDOCOMPOUND \\ (PETROLEUM FRACTION)\\ RELATED PROPERTIES\end{tabular} &
+				&
+				&
+				&
+				&
+				\\ \hline
+				Specific Gravity &
+				0,687701 &
+				0,757963 &
+				0,782641 &
+				0,754853 &
+				\\
+				Watson K &
+				12,3478558667387 &
+				12,686423659089 &
+				13,0469425638431 &
+				14,0192660269206 &
+				\\
+				\begin{tabular}[c]{@{}l@{}}Temperature for \\ Viscosity Data Point 1\end{tabular} &
+				310,95 &
+				310,95 &
+				310,95 &
+				310,95 &
+				K \\
+				Viscosity @ T1 &
+				2,90960390372366E-07 &
+				9,58036292121748E-07 &
+				2,72557478768417E-06 &
+				4,73752008031969E-06 &
+				\unit{\pascal \second} \\
+				\begin{tabular}[c]{@{}l@{}}Temperature for \\ Viscosity Data Point 2\end{tabular} &
+				372,05 &
+				372,05 &
+				372,05 &
+				372,05 &
+				K \\
+				Viscosity @ T2 &
+				3,01768153261329E-07 &
+				6,15640578277514E-07 &
+				1,29660618472763E-06 &
+				1,60355612823309E-06 &
+				\unit{\pascal \second} \\ \hline
+			\end{tabular}%
+		}
+	\end{table}
+	
+	\subsection{Reação de deslocamento}
+	
+	A reação de deslocamento não muda no modelo de parâmetros concentrados.
+	
+	\begin{reaction}
+		CO + H2O <=> CO2 + H2
+		\label{reac:WGS_2}
+	\end{reaction}
+	
+	\begin{equation}
+		r_\mathrm{WGS}' = k_{\mathrm{WGS}}' P_{\ce{CO}}^a P_{\ce{H2O}}^b  \left(1 - \frac{1}{K_{\mathrm{WGS}}} \frac{P_{\ce{CO2}} P_{\ce{H2}}}{P_{\ce{CO}} P_{\ce{H2O}}} \right)
+		\label{eq:rate_CO2_2}
+	\end{equation}
+	
+	\begin{equation}
+		k'_\mathrm{WGS} = A_\mathrm{WGS}' \exp \left( \frac{-E_\mathrm{WGS}}{RT} \right)
+		\label{eq:k_WGS_2}
+	\end{equation}
+	
+	\begin{equation}
+		K_{\mathrm{WGS}} = \num{1.45e-2} \exp \left( \frac{\num{4.62e3}}{T} \right)
+		\label{eq:K_WGS_2}
+	\end{equation}
+	
+	\begin{table*}[!h]
+		\centering
+		\caption{Parâmetros da reação de deslocamento.}
+		\label{tab:params_WGS_2}
+		%	\resizebox{1\textwidth}{!}{%
+			\begin{tabular}{rrrr}
+				\toprule
+				$A_{\mathrm{WGS}}'$ (\unit{\mole \per \second \per \gram \per \pascal^{a+b}}) & $E_{\mathrm{WGS}}$ (\unit{\joule \per \mole}) & $a$ & $b$ \\
+				\midrule
+				\num{2.066E+06} & \num{164536} & \num{0.02} & \num{0.53} \\
+				\bottomrule
+			\end{tabular}%}
+	\end{table*}
+	
+	\subsection{Reações de formação dos pseudo-componentes}
+	
+	As fórmulas moleculares dos nossos pseudo-componentes são:
+
+	\begin{itemize}
+		\item Gases: \ce{CH4}
+		\item Gasolina: \ce{C_{6,95}H_{15,50}}
+		\item Querosene: \ce{C_{12,78}H_{27,32}}
+		\item Diesel: \ce{C_{18,26}H_{37,09}}
+		\item Pesados: \ce{C_{24,94}H_{48,14}}
+	\end{itemize}
+	
+	E suas reações de formação:
+	
+	\paragraph{Gases}
+	\begin{reaction}
+		3 H2 + CO -> CH4 + H2O
+		\label{reac:gases_2}
+	\end{reaction}
+	
+	\paragraph{Gasolina}
+	\begin{reaction}
+		14,9 H2 + 6,95 CO -> 6,91768 H2O + C_{6,95}H_{15,50}
+	\end{reaction}
+	
+	\paragraph{Querosene}
+	\begin{reaction}
+		26,56 H2 + 12,78 CO -> 12,7696 H2O + C_{12,78}H_{27,32}
+		\label{reac:querosene}
+	\end{reaction}
+	
+	\paragraph{Diesel}
+	\begin{reaction}
+		37,52 H2 + 18,26 CO -> 18,2143 H2O + C_{18,26}H_{37,09} 
+	\end{reaction}
+	
+	\paragraph{Pesados}
+	\begin{reaction}
+		50,88 H2 + 24,94 CO -> 24,6929 H2O + C_{24,94}H_{48,14}
+		\label{reac:pesados_2}
+	\end{reaction}
+	
+	\colorbox{yellow}{\parbox{\textwidth}{
+			\textbf{\underline{CUIDADO}}: As relações estequiométricas acima são apenas aproximações, os balanços molares não vão fechar exatamente pois os pseudo-componentes originam de duas famílias de reações: de formação de parafinas e de olefinas.
+	}}
+	
+	\subsection{Velocidades de reação do modelo de parâmetros concentrados}
+	
+	Para obter as velocidades de reação dos pseudo-componentes, podemos somar as velocidades de reação dos componentes individuais do modelo distribuído:
+	
+	\paragraph{Gases}
+	\begin{equation}
+		r'_\mathrm{gases} = \sum_{n=1}^{n=4} r'_\mathrm{ HCs } y_n
+	\end{equation}
+	
+	\colorbox{pink}{\parbox{\textwidth}{
+			\textbf{\underline{IMPORTANTE}}: Para os hidrocarbonetos com $n = 1$ e $n = 2$ substitua a energia de ativação da \autoref{eq:k_2} ($E_\mathrm{HCs}$) por $E_{\mathrm{C1}}$ e $E_{\mathrm{C2}}$ (\autoref{tab:params_Mousavi_2}), respectivamente.
+	}}
+
+	Ou seja:
+	\begin{equation}
+		r'_\mathrm{gases} = r_1 + r_2 + r_3 + r_4
+		\label{eq:r_gases_2}
+	\end{equation}
+	
+	Com:
+	\begin{equation}
+		r_1 = A'_\mathrm{ HCs } \exp \left ( \frac{-E_\mathrm{C1}}{RT} \right ) \frac{P_{\ce{H2}}^{0.75}P_\mathrm{CO}}{(1 + K_\mathrm{CO}P_\mathrm{CO})^2} y_1
+	\end{equation}
+	
+	\begin{equation}
+		r_2 = A'_\mathrm{ HCs } \exp \left ( \frac{-E_\mathrm{C2}}{RT} \right ) \frac{P_{\ce{H2}}^{0.75}P_\mathrm{CO}}{(1 + K_\mathrm{CO}P_\mathrm{CO})^2} y_2
+	\end{equation}
+	
+	\begin{equation}
+		r_3 = A'_\mathrm{ HCs } \exp \left ( \frac{-E_\mathrm{HCs}}{RT} \right ) \frac{P_{\ce{H2}}^{0.75}P_\mathrm{CO}}{(1 + K_\mathrm{CO}P_\mathrm{CO})^2} y_3
+	\end{equation}
+	
+	\begin{equation}
+		r_4 = A'_\mathrm{ HCs } \exp \left ( \frac{-E_\mathrm{HCs}}{RT} \right ) \frac{P_{\ce{H2}}^{0.75}P_\mathrm{CO}}{(1 + K_\mathrm{CO}P_\mathrm{CO})^2} y_4
+	\end{equation}
+	
+
+	\paragraph{Gasolina}
+	\begin{equation}
+		r'_\mathrm{gasolina} = r'_\mathrm{ HCs } \sum_{n=5}^{n=10} y_n
+	\end{equation}
+	
+	\paragraph{Querosene}
+	\begin{equation}
+		r'_\mathrm{querosene} = r'_\mathrm{ HCs } \sum_{n=11}^{n=16} y_n
+	\end{equation}
+	
+	\paragraph{Diesel}
+	\begin{equation}
+		r'_\mathrm{diesel} = r'_\mathrm{ HCs } \sum_{n=17}^{n=20} y_n
+	\end{equation}
+	
+	\paragraph{Pesados}
+	\begin{equation}
+		r'_\mathrm{pesados} = r'_\mathrm{ HCs } \sum_{n=21}^{n \geq 30} y_n
+	\end{equation}
+	
+	Veja que nas equações acima o $n$ não multiplica o $y_n$ pois estamos seguindo as estequiometrias das Reações \ref{reac:gases_2} a \ref{reac:pesados_2}. Enquanto para o \ce{CO}, na \autoref{eq:r_monox}, o $n$ aparece pois a cada mol de hidrocarboneto que é gerado $n$ mols de monóxido de carbono são consumidos, a lógica é a mesma para o consumo de hidrogênio e a geração de água.
+	
+	\paragraph{Monóxido de carbono}
+	\begin{equation}
+		- r_{\ce{CO}}' = r_{\mathrm{WGS}}' + \sum_{n=1}^{n \geq 30} r_{\mathrm{HCs}}' n y_n
+		\label{eq:r_monox}
+	\end{equation}
+	
+	\paragraph{Hidrogênio}
+	\begin{equation}
+		-r_{\ce{H2}}' = 3 r'_\mathrm{gases} + 14,9 r'_\mathrm{gasolina} + 26,56 r'_\mathrm{querosene} + 37,52 r'_\mathrm{diesel} + 50,88 r'_\mathrm{pesados}
+		\label{eq:r_H2_simple_2}
+	\end{equation}
+	
+	\paragraph{Água}
+	\begin{equation}
+		r_{\ce{H2O}}' =  \left(\sum_{n=1}^{n \geq 30} r_{\mathrm{HCs}}' n y_n\right) - r_{\mathrm{WGS}}'
+	\end{equation}
+	
+	\paragraph{Dióxido de carbono}
+	\begin{equation}
+		r_{\ce{CO2}}' = r_{\mathrm{WGS}}'
+	\end{equation}
+	
+	\paragraph{A velocidade de formação dos hidrocarbonetos}
+	
+	\begin{equation}
+		r_\mathrm{HCs}' = k' \frac{P_{\ce{H2}}^{0.75} P_{\ce{CO}}}{(1 + K_{\ce{CO}} P_{\ce{CO}})^2}
+		\label{eq:r_HCs_2}
+	\end{equation}
+	
+	\begin{equation}
+		k' = A_\mathrm{HCs}' \exp \left( \frac{-E_\mathrm{HCs}}{RT} \right)
+		\label{eq:k_2}
+	\end{equation}
+	
+	\begin{equation}
+		K_{\ce{CO}} = k_{\ce{CO}} \exp \left( \frac{-\Delta H_{\ce{CO}}}{RT} \right)
+		\label{eq:K_CO_2}
+	\end{equation}
+	
+	\colorbox{pink}{\parbox{\textwidth}{
+			\textbf{\underline{IMPORTANTE}}: Para os hidrocarbonetos com $n = 1$ e $n = 2$ substitua a energia de ativação da \autoref{eq:k_2} ($E_\mathrm{HCs}$) por $E_{\mathrm{C1}}$ e $E_{\mathrm{C2}}$ (\autoref{tab:params_Mousavi_2}), respectivamente.
+	}}
+	
+	\begin{table*}[!h]
+		\centering
+		\caption{Parâmetros das Equações \ref{eq:r_HCs_2}, \ref{eq:k_2} e \ref{eq:K_CO_2}.}
+		\label{tab:params_Mousavi_2}
+		\resizebox{1\textwidth}{!}{%
+			\begin{tabular}{rrrrrr}
+				\toprule
+				$k_{\ce{CO}}$ (\unit{\pascal^{-1}}) & $\Delta H_{\ce{CO}}$ (\unit{\joule \per \mole}) & $A_{\mathrm{HCs}}'$ (\unit{\mole \per \second \per \gram \per \pascal^{1.75}}) & $E_{\mathrm{HCs}}$ (\unit{\joule \per \mole}) & $E_{\mathrm{C1}}$ (\unit{\joule \per \mole}) & $E_{\mathrm{C2}}$ (\unit{\joule \per \mole}) \\
+				\midrule
+				\num{1.398E-05} & \num{933.0} & \num{9.551E-01} & \num{147204} & \num{142602} & \num{153273} \\
+				\bottomrule
+			\end{tabular}
+		}
+	\end{table*}
+	
+	\subsubsection{Distribuição dos hidrocarbonetos}
+	
+	\begin{equation}
+		y_n = (1 - \alpha) \alpha^{(n - 1)}
+		\label{eq:alpha_2}
+	\end{equation}
+	
+	$y_n$ é a fração molar do hidrocarboneto com $n$ carbonos. O $y_n$ representa exclusivamente a distribuição dos hidrocarbonetos, não estão inclusos o \ce{CO}, \ce{CO2}, \ce{H2} e \ce{H2O}.
+	
+	A probabilidade de crescimento de cadeia ($\alpha$) é:
+	
+	\begin{equation}
+		\alpha = \hat{\beta_0} + \hat{\beta_1} T
+	\end{equation}
+	
+	Onde $T$ está em Kelvin e [$\hat{\beta_0}, \hat{\beta_1}] = [\num{1.626}, \qty{-1.495e-03}{\per \kelvin}]$.
+	
+	\subsection{Implementação e validação no DWSIM}
+	
+	No DWSIM a velocidade de consumo de \ce{CO} para a reação de formação de gases foi implementada como mostra o \autoref{lst:dwsim_gases}. Para os demais componentes a implementação é mais simples, um exemplo para o querosene é dado no \autoref{lst:dwsim_querosene}. Nos \textit{scripts} abaixo $r$  é a velocidade de consumo do monóxido de carbono (é positivo mesmo, o DWSIM coloca o sinal).
+	
+	\colorbox{yellow}{\parbox{\textwidth}{
+			\textbf{\underline{CUIDADO}}: Nos scripts abaixo os $r$ são velocidades de reação para reações isoladas, por isso não aparecem todos os termos representados na \autoref{eq:r_monox}.
+	}}
+	
+	\begin{lstlisting}[language=Python, caption=\textit{Script} do DWSIM (Python) para implementação da velocidade de consumo de \ce{CO} na geração de gases., label={lst:dwsim_gases}]
+from math import exp
+
+R = 8.314 # J/mol K
+
+A_HCs = 0.9550608601894232 # kmol/kg s Pa**(a+b)
+E_HCs = 147204 # J/mol
+E_C1 = 142602 # J/mol
+E_C2 = 153273 # J/mol
+k_CO = 1.397972209918762e-05 # Pa**-c
+H_CO = 932.9790718460237 # J/mol
+a = 0.75
+b = 1.00
+c = 1.00
+
+P_H2 = R1
+P_CO = R2
+
+alfa = 1.62628872e+00 - 1.49497171e-03 * T
+
+r_HCs_denominator = (1 + k_CO*exp(-H_CO/(R*T))*(P_CO**c))**2
+
+# r_CO_1
+y_1 = (1-alfa)*alfa**(1-1)
+r_CO_1_numerator = A_HCs*exp(-E_C1/(R*T))*(P_H2**a)*(P_CO**b)
+r_CO_1 = 1 * y_1 * r_CO_1_numerator/r_HCs_denominator
+
+# r_CO_2
+y_2 = (1-alfa)*alfa**(2-1)
+r_CO_2_numerator = A_HCs*exp(-E_C2/(R*T))*(P_H2**a)*(P_CO**b)
+r_CO_2 = 2 * y_2 * r_CO_2_numerator/r_HCs_denominator
+
+r = r_CO_1 + r_CO_2 # kmol/kg s
+
+# r_CO_3 e r_CO_4
+r_HCs_numerator = A_HCs*exp(-E_HCs/(R*T))*(P_H2**a)*(P_CO**b)
+r_HCs = r_HCs_numerator/r_HCs_denominator
+for n in range(3, 5):
+	y_n = (1-alfa)*alfa**(n-1)
+	r += n * y_n * r_HCs # kmol/kg s
+	\end{lstlisting}
+	
+		\begin{lstlisting}[language=Python, caption=\textit{Script} do DWSIM (Python) para implementação da velocidade de consumo de \ce{CO} na geração de querosene., label={lst:dwsim_querosene}]
+from math import exp
+
+R = 8.314 # J/mol K
+
+A_HCs = 0.9550608601894232 # kmol/kg s Pa**(a+b)
+E_HCs = 147204 # J/mol
+k_CO = 1.397972209918762e-05 # Pa**-c
+H_CO = 932.9790718460237 # J/mol
+a = 0.75
+b = 1.00
+c = 1.00
+
+P_H2 = R1
+P_CO = R2
+
+alfa = 1.62628872e+00 - 1.49497171e-03 * T
+
+
+r_HCs_numerator = A_HCs*exp(-E_HCs/(R*T))*(P_H2**a)*(P_CO**b)
+r_HCs_denominator = (1 + k_CO*exp(-H_CO/(R*T))*(P_CO**c))**2
+
+r_HCs = r_HCs_numerator/r_HCs_denominator
+
+soma_n_yn = 0
+
+for n in range(11, 17):
+	y_n = (1-alfa)*alfa**(n-1)
+	soma_n_yn += n * y_n
+
+r = soma_n_yn * r_HCs # kmol/kg s
+	\end{lstlisting}
+	
+	\subsection{Validação do modelo de parâmetros concentrados no DWSIM}
+	
+	O modelo de parâmetros concentrados foi implementado no DWSIM e comparado aos dados experimentais. O resultado está representado no gráfico de paridade da \autoref{fig:parity_conc}. O preço que se paga pela simplificação é uma maior dispersão dos resíduos, o que é de se esperar, pois estamos somando as incertezas do modelo de parâmetros distribuídos (\autoref{fig:parity_dist}).
+	
+	\begin{figure}
+		\centering
+		\caption{Gráfico de paridade do modelo de parâmetros concentrados.}
+		\includegraphics{parity_lumped}
+		\label{fig:parity_conc}
+	\end{figure}
+	
+	\begin{figure}
+		\centering
+		\caption{Gráfico de paridade do modelo de parâmetros distribuídos.}
+		\includegraphics[width = \textwidth]{figure-m_out_parity_dwsim}
+		\label{fig:parity_dist}
+	\end{figure}
+	
+\end{document}
