@@ -13,7 +13,7 @@ from y_n import y_n
 from upsilon_n import upsilon_n
 
 def Mousavi():
-    model_name = 'Mousavi'
+    model_name = 'Mousavi_no_correction'
     param_dict = {'k_ads': np.float64(1.397972209918762e-05),
                      'H_ads': np.float64(932.9790718460237),
                      'A_HCs': np.float64(955.0608601894231),

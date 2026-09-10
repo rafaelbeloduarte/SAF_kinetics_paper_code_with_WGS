@@ -1,3 +1,4 @@
+*.svg
 .python-version
 *.HUV
 *.png
